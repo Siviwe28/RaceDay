@@ -1,275 +1,171 @@
-API ENDPOINT PLAN
-=================
-
-BASE URL:
-/api
-
-
-1. AUTHENTICATION
-=================
-
-POST   /api/auth/register
-       Register a new user.
-
-POST   /api/auth/login
-       Login an existing user and return authentication token.
-
-
-2. USERS
-========
-
-GET    /api/users
-       Get all users.
-
-GET    /api/users/{id}
-       Get a single user by User_ID.
-
-POST   /api/users
-       Create a new user.
-
-PUT    /api/users/{id}
-       Update an existing user's details.
-
-DELETE /api/users/{id}
-       Delete a user.
-
-GET    /api/users/{id}/enrolments
-       Get all enrolments belonging to a user.
-
-
-3. ROLES
-========
-
-GET    /api/roles
-       Get all roles.
-
-GET    /api/roles/{id}
-       Get a specific role.
-
-POST   /api/roles
-       Create a new role.
-
-PUT    /api/roles/{id}
-       Update an existing role.
-
-DELETE /api/roles/{id}
-       Delete a role.
-
-GET    /api/roles/{id}/users
-       Get all users assigned to a role.
-
-
-4. EVENTS
-=========
-
-GET    /api/events
-       Get all events.
-
-GET    /api/events/{id}
-       Get a specific event.
-
-POST   /api/events
-       Create a new event.
-
-PUT    /api/events/{id}
-       Update an existing event.
-
-DELETE /api/events/{id}
-       Delete an event.
-
-GET    /api/events/{id}/categories
-       Get all categories belonging to an event.
-
-GET    /api/events/{id}/enrolments
-       Get all participants enrolled in an event.
-
-GET    /api/events/{id}/results
-       Get results for participants in an event.
-
-
-5. CATEGORIES
-=============
-
-GET    /api/categories
-       Get all event categories.
-
-GET    /api/categories/{id}
-       Get a specific category.
-
-POST   /api/categories
-       Create a new category.
-
-PUT    /api/categories/{id}
-       Update an existing category.
-
-DELETE /api/categories/{id}
-       Delete a category.
-
-GET    /api/categories/{id}/enrolments
-       Get all participants enrolled in a category.
-
-
-6. ENROLMENTS
-=============
-
-GET    /api/enrolments
-       Get all enrolments.
-
-GET    /api/enrolments/{id}
-       Get a specific enrolment.
-
-POST   /api/enrolments
-       Register a participant for a category.
-
-PUT    /api/enrolments/{id}
-       Update an enrolment.
-
-DELETE /api/enrolments/{id}
-       Cancel/delete an enrolment.
-
-GET    /api/enrolments/{id}/result
-       Get the race result for an enrolment.
-
-
-7. RESULTS
-==========
-
-GET    /api/results
-       Get all race results.
-
-GET    /api/results/{id}
-       Get a specific result.
-
-POST   /api/results
-       Record a new race result.
-
-PUT    /api/results/{id}
-       Update an existing race result.
-
-DELETE /api/results/{id}
-       Delete a race result.
-
-
-DATABASE RELATIONSHIPS
-======================
-
-ROLES
-  |
-  | 1
-  |
-  | *
-USERS
-  |
-  | 1
-  |
-  | *
-ENROLMENTS
-  |
-  | 1
-  |
-  | 1
-RESULTS
-
-
-EVENTS
-  |
-  | 1
-  |
-  | *
-CATEGORIES
-  |
-  | 1
-  |
-  | *
-ENROLMENTS
-
-
-MAIN API FLOW
-=============
-
-User
-  ↓
-Authentication
-  ↓
-Events
-  ↓
-Categories
-  ↓
-Enrolment
-  ↓
-Results
-
-
-HTTP METHODS
-============
-
-GET
-    Retrieve data.
-
-POST
-    Create new data.
-
-PUT
-    Update existing data.
-
-DELETE
-    Remove existing data.
-
-
-EXAMPLE REQUESTS
-================
-
-POST /api/auth/register
-
-{
-    "email": "user@email.com",
-    "password": "Password123",
-    "firstName": "John",
-    "lastName": "Doe",
-    "phone": "0712345678",
-    "roleId": 2
-}
-
-
-POST /api/events
-
-{
-    "organiser": "Race Organiser",
-    "eventName": "Durban Marathon",
-    "description": "Annual marathon event",
-    "eventType": "Marathon",
-    "startDate": "2026-10-10",
-    "endDate": "2026-10-10",
-    "location": "Durban"
-}
-
-
-POST /api/categories
-
-{
-    "eventId": 1,
-    "catName": "10 KM Race",
-    "distanceKm": 10,
-    "entryFee": 150.00
-}
-
-
-POST /api/enrolments
-
-{
-    "partId": 5,
-    "catId": 2,
-    "regDate": "2026-09-03",
-    "status": "Confirmed",
-    "raceNumber": 105
-}
-
-
-POST /api/results
-
-{
-    "enrolId": 10,
-    "finishTime": "01:25:32",
-    "position": 15,
-    "chipTime": "01:25:10"
-}
+CREATE TABLE users (
+    id SERIAL PRIMARY KEY,
+    email VARCHAR(255) UNIQUE NOT NULL,
+    password_hash VARCHAR(255) NOT NULL,
+    role VARCHAR(20) NOT NULL CHECK (role IN ('organiser', 'participant')),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE events (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    description TEXT,
+    date TIMESTAMP NOT NULL,
+    location VARCHAR(255) NOT NULL,
+    distance VARCHAR(50) NOT NULL,
+    event_type VARCHAR(20) NOT NULL CHECK (event_type IN ('run', 'walk', 'cycle')),
+    status VARCHAR(20) DEFAULT 'draft' CHECK (status IN ('draft', 'published', 'in_progress', 'completed', 'cancelled')),
+    organiser_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE categories (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(100) NOT NULL,
+    age_group VARCHAR(50),
+    distance VARCHAR(50),
+    event_id INTEGER NOT NULL REFERENCES events(id) ON DELETE CASCADE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(event_id, name)
+);
+
+CREATE TABLE enrolments (
+    id SERIAL PRIMARY KEY,
+    participant_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    event_id INTEGER NOT NULL REFERENCES events(id) ON DELETE CASCADE,
+    category_id INTEGER NOT NULL REFERENCES categories(id) ON DELETE CASCADE,
+    enrolment_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    status VARCHAR(20) DEFAULT 'pending' CHECK (status IN ('pending', 'confirmed', 'cancelled', 'attended')),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(participant_id, event_id, category_id)
+);
+
+CREATE TABLE results (
+    id SERIAL PRIMARY KEY,
+    event_id INTEGER NOT NULL REFERENCES events(id) ON DELETE CASCADE,
+    category_id INTEGER NOT NULL REFERENCES categories(id) ON DELETE CASCADE,
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    finish_time TIME,
+    position INTEGER,
+    dnf BOOLEAN DEFAULT FALSE,
+    dns BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(event_id, user_id)
+);
+
+CREATE INDEX idx_events_date ON events(date);
+CREATE INDEX idx_events_status ON events(status);
+CREATE INDEX idx_events_organiser ON events(organiser_id);
+CREATE INDEX idx_categories_event ON categories(event_id);
+CREATE INDEX idx_enrolments_participant ON enrolments(participant_id);
+CREATE INDEX idx_enrolments_event ON enrolments(event_id);
+CREATE INDEX idx_enrolments_category ON enrolments(category_id);
+CREATE INDEX idx_results_event ON results(event_id);
+CREATE INDEX idx_results_category ON results(category_id);
+CREATE INDEX idx_results_user ON results(user_id);
+
+CREATE OR REPLACE FUNCTION update_updated_at_column()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.updated_at = CURRENT_TIMESTAMP;
+    RETURN NEW;
+END;
+$$ language 'plpgsql';
+
+CREATE TRIGGER update_events_updated_at BEFORE UPDATE ON events
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_enrolments_updated_at BEFORE UPDATE ON enrolments
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_results_updated_at BEFORE UPDATE ON results
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+INSERT INTO users (email, password_hash, role) VALUES
+('organiser@raceday.com', 'hashed_password_1', 'organiser'),
+('participant1@raceday.com', 'hashed_password_2', 'participant'),
+('participant2@raceday.com', 'hashed_password_3', 'participant');
+
+INSERT INTO events (name, description, date, location, distance, event_type, status, organiser_id) VALUES
+('City Marathon 2026', 'Annual city marathon event', '2026-09-15 07:00:00', 'City Center', '42.2km', 'run', 'published', 1),
+('Coastal Walk', 'Scenic coastal walking event', '2026-10-01 08:00:00', 'Beach Road', '10km', 'walk', 'draft', 1),
+('Mountain Cycle', 'Challenging mountain bike race', '2026-11-10 06:00:00', 'Mountain Ridge', '21.1km', 'cycle', 'published', 1);
+
+INSERT INTO categories (name, age_group, distance, event_id) VALUES
+('Under 20', 'U20', '5km', 1),
+('Senior', '18-39', '42.2km', 1),
+('Masters', '40+', '42.2km', 1),
+('10km Walk', NULL, '10km', 2),
+('21km Cycle', NULL, '21.1km', 3);
+
+INSERT INTO enrolments (participant_id, event_id, category_id, status) VALUES
+(2, 1, 2, 'confirmed'),
+(3, 1, 1, 'pending'),
+(2, 3, 5, 'confirmed');
+
+INSERT INTO results (event_id, category_id, user_id, finish_time, position) VALUES
+(1, 2, 2, '03:45:30', 1),
+(1, 1, 3, '00:25:00', 1);
+
+SELECT * FROM events 
+WHERE event_type = 'run' 
+  AND date >= CURRENT_DATE 
+  AND status = 'published'
+ORDER BY date;
+
+SELECT e.*, 
+       json_agg(c.*) as categories
+FROM events e
+LEFT JOIN categories c ON e.id = c.event_id
+WHERE e.id = 1
+GROUP BY e.id;
+
+SELECT * FROM events 
+WHERE date >= CURRENT_DATE 
+  AND status IN ('published', 'in_progress')
+ORDER BY date;
+
+SELECT u.id, u.email, c.name as category, en.status, en.enrolment_date
+FROM enrolments en
+JOIN users u ON en.participant_id = u.id
+JOIN categories c ON en.category_id = c.id
+WHERE en.event_id = 1;
+
+SELECT * FROM categories WHERE event_id = 1;
+
+SELECT e.*, ev.name as event_name, c.name as category_name
+FROM enrolments e
+JOIN events ev ON e.event_id = ev.id
+JOIN categories c ON e.category_id = c.id
+WHERE e.participant_id = 2;
+
+SELECT r.*, u.email, c.name as category
+FROM results r
+JOIN users u ON r.user_id = u.id
+JOIN categories c ON r.category_id = c.id
+WHERE r.event_id = 1
+ORDER BY r.position;
+
+SELECT COUNT(*) 
+FROM enrolments 
+WHERE participant_id = 2 
+  AND event_id = 1 
+  AND category_id = 2
+  AND status != 'cancelled';
+
+UPDATE events SET status = 'cancelled' WHERE id = 1;
+
+SELECT 
+    e.id,
+    e.name,
+    COUNT(DISTINCT en.participant_id) as total_participants,
+    COUNT(DISTINCT c.id) as total_categories,
+    COUNT(r.id) as total_results
+FROM events e
+LEFT JOIN enrolments en ON e.id = en.event_id AND en.status != 'cancelled'
+LEFT JOIN categories c ON e.id = c.event_id
+LEFT JOIN results r ON e.id = r.event_id
+GROUP BY e.id;
